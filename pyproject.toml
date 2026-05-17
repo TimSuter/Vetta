@@ -1,0 +1,26 @@
+[project]
+name = "vetta"
+version = "0.1.0"
+description = "Multiday Swiss hut-to-hut hiking planner"
+requires-python = ">=3.11"
+dependencies = [
+  "pandas",
+  "geopandas",
+  "shapely",
+  "pyproj",
+  "scipy",
+  "networkx",
+  "pydantic",
+  "typer",
+  "rich",
+  "requests",
+  "pyarrow",
+  "pytest"
+]
+
+[project.optional-dependencies]
+prototype = ["streamlit"]
+api = ["fastapi", "uvicorn"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
