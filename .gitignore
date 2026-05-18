@@ -1,0 +1,13 @@
+.venv/
+build/
+cache/
+vetta.egg-info/
+
+data/swisstopo_wanderwege/*.gpkg
+data/swisstopo_wanderwege/*.gpkg.zip
+data/swisstopo_wanderwege/*_graph.pkl
+
+*.pkl
+*.html
+*.csv
+*.ipynb

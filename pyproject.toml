@@ -6,6 +6,8 @@ requires-python = ">=3.11"
 dependencies = [
   "pandas",
   "geopandas",
+  "pyogrio",
+  "folium",
   "shapely",
   "pyproj",
   "scipy",
@@ -15,7 +17,7 @@ dependencies = [
   "rich",
   "requests",
   "pyarrow",
-  "pytest"
+  "pytest",
 ]
 
 [project.optional-dependencies]
@@ -24,3 +26,6 @@ api = ["fastapi", "uvicorn"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.setuptools]
+py-modules = ["load_hut_data", "find_nearby_huts", "find_hiking_routes"]

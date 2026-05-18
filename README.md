@@ -30,6 +30,36 @@ Users can plan itineraries by specifying:
 - Precompute feasible hut-to-hut routes between nearby huts.
 - Save route legs to disk in a simple, reproducible format.
 
+## Swiss Hiking Routes
+
+`find_hiking_routes.py` builds hut-to-hut routes on the official swisstopo
+`swissTLM3D Wanderwege` network using NetworkX. The first run downloads the
+swisstopo GeoPackage and builds a cached graph in `data/swisstopo_wanderwege/`;
+later runs reuse that graph.
+
+Default 3-day itinerary map from Vermigel Hütte:
+
+```powershell
+.\.venv\Scripts\python.exe find_hiking_routes.py
+```
+
+This uses a 20 km daily neighbor search radius by default. Each route leg is
+treated as one hiking day.
+
+Build a CSV route table for all huts:
+
+```powershell
+.\.venv\Scripts\python.exe find_hiking_routes.py --all-huts --skip-map
+```
+
+Useful itinerary inputs:
+
+```powershell
+.\.venv\Scripts\python.exe find_hiking_routes.py --days 3 --min-hours 5 --max-hours 8 --neighbor-radius-km 20
+```
+
+Trail difficulty filtering is intentionally left out for now.
+
 ### Local planner
 
 - Read the precomputed route-leg table.
