@@ -58,6 +58,7 @@ DEFAULT_MAX_HOURS = 8.0
 DEFAULT_WALKING_SPEED_KMH = 4.0
 DEFAULT_ASCENT_M_PER_HOUR = 400.0
 DEFAULT_DESCENT_M_PER_HOUR = 800.0
+DEFAULT_MIN_NIGHTS_BETWEEN_SAME_HUT = 4
 NODE_PRECISION_M = 0.01
 ROUTE_COLUMNS = [
     "source_index",
@@ -142,6 +143,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--walking-speed-kmh", type=float, default=DEFAULT_WALKING_SPEED_KMH)
     parser.add_argument("--ascent-m-per-hour", type=float, default=DEFAULT_ASCENT_M_PER_HOUR)
     parser.add_argument("--descent-m-per-hour", type=float, default=DEFAULT_DESCENT_M_PER_HOUR)
+    parser.add_argument(
+        "--min-nights-between-same-hut",
+        type=int,
+        default=DEFAULT_MIN_NIGHTS_BETWEEN_SAME_HUT,
+        help=(
+            "Minimum overnight stays required between repeat visits to the same hut. "
+            f"Defaults to {DEFAULT_MIN_NIGHTS_BETWEEN_SAME_HUT}. "
+            "The final return to the starting hut is always allowed for itineraries "
+            "with at least 4 overnight stays."
+        ),
+    )
     parser.add_argument(
         "--all-huts",
         action="store_true",
@@ -555,6 +567,34 @@ def build_route_table(
     )
 
 
+def can_visit_hut(
+    destination_index: int,
+    visited_indices: list[int],
+    day: int,
+    total_days: int,
+    min_nights_between_same_hut: int,
+    start_index: int,
+) -> bool:
+    if destination_index not in visited_indices:
+        return True
+
+    is_final_return_to_start = (
+        destination_index == start_index
+        and day == total_days
+        and total_days >= 4
+    )
+    if is_final_return_to_start:
+        return True
+
+    last_visit_position = max(
+        position
+        for position, visited_index in enumerate(visited_indices)
+        if visited_index == destination_index
+    )
+    nights_between_stays = len(visited_indices) - last_visit_position - 1
+    return nights_between_stays >= min_nights_between_same_hut
+
+
 def build_multiday_itineraries(
     graph: nx.DiGraph,
     huts: gpd.GeoDataFrame,
@@ -563,9 +603,12 @@ def build_multiday_itineraries(
     min_hours: float,
     max_hours: float,
     neighbor_radius_km: float,
+    min_nights_between_same_hut: int,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     if days < 1:
         raise ValueError("--days must be at least 1.")
+    if min_nights_between_same_hut < 0:
+        raise ValueError("--min-nights-between-same-hut must be at least 0.")
 
     print("Preparing hut snap points.")
     snapped_nodes = nearest_graph_nodes(graph, hut_points_metric(huts))
@@ -597,7 +640,14 @@ def build_multiday_itineraries(
         for current_index, visited_indices, legs in partials:
             for leg in legs_from(current_index):
                 destination_index = int(leg["destination_index"])
-                if destination_index in visited_indices and destination_index != start_index:
+                if not can_visit_hut(
+                    destination_index,
+                    visited_indices,
+                    day,
+                    days,
+                    min_nights_between_same_hut,
+                    start_index,
+                ):
                     continue
 
                 next_partials.append(
@@ -955,6 +1005,11 @@ def main() -> None:
         f"Building {args.days}-day itineraries for input hut: {source_hut.get('name')} "
         f"with daily neighbor radius {args.neighbor_radius_km:g} km."
     )
+    print(
+        "Repeat hut rule: "
+        f"at least {args.min_nights_between_same_hut} overnight stays between repeats; "
+        "final return to start allowed for itineraries with at least 4 overnight stays."
+    )
 
     routes, itineraries = build_multiday_itineraries(
         graph,
@@ -964,6 +1019,7 @@ def main() -> None:
         min_hours=args.min_hours,
         max_hours=args.max_hours,
         neighbor_radius_km=args.neighbor_radius_km,
+        min_nights_between_same_hut=args.min_nights_between_same_hut,
     )
 
     args.routes_output.parent.mkdir(parents=True, exist_ok=True)
