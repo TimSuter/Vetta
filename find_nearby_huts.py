@@ -99,6 +99,18 @@ def truthy_inclusion_mask(values: pd.Series) -> pd.Series:
     return normalized.isin({"1", "true", "t", "yes", "y", "include"})
 
 
+def filter_huts_by_inclusion_column(
+    gdf: gpd.GeoDataFrame,
+    include_column: str = HUT_INCLUSION_COLUMN,
+) -> gpd.GeoDataFrame:
+    if include_column not in gdf.columns:
+        raise ValueError(
+            f"Expected an {include_column!r} column in the hut data. "
+            f"Update {DEFAULT_INPUT} from {DEFAULT_INCLUSION_CSV} first."
+        )
+    return gdf[truthy_inclusion_mask(gdf[include_column])].copy()
+
+
 def filter_huts_by_inclusion_csv(
     gdf: gpd.GeoDataFrame,
     path: Path,
@@ -237,9 +249,13 @@ def main() -> None:
         print(f"Hut inclusion template written to: {args.write_inclusion_template}")
         return
 
+    before_count = len(huts)
     if args.inclusion_csv:
         huts = filter_huts_by_inclusion_csv(huts, args.inclusion_csv)
-        print(f"Loaded {len(huts)} huts included by: {args.inclusion_csv}")
+        print(f"Loaded {len(huts)} of {before_count} huts included by: {args.inclusion_csv}")
+    else:
+        huts = filter_huts_by_inclusion_column(huts)
+        print(f"Loaded {len(huts)} of {before_count} huts included by: {args.input}")
 
     input_hut = find_input_hut(huts, args.hut)
     nearby = nearest_huts(huts, input_hut, args.radius_km)

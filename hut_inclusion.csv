@@ -91,7 +91,7 @@
 233,Anzonico,46.431355,8.8624280,chalet,,,,,,,,,0
 107,Apart Chasina,46.9596930,10.4042430,chalet,,,,,,https://www.soliva.ch/,,,0
 1619,Arboretum de Riex,46.554768000000003,6.768941000000000,wilderness_hut,50,,,permit,Commune de Riex,http://sallesbel.primetechnologies.ch/Salles/Details/8175?description=Abri%20forestier%20de%20l%27Arboretum&place=Chemin%20de%20la%20Rochette%2022%2C%201072%20Forel%20%28Lavaux%29&tariflie=2067&tarifLieHabitant=2068,required,,1
-92,Arche Ruchenberg,47.0019920,8.5390300,chalet,42,42,,,,https://arche-stiftung-ruchenberg.ch/,required,,1
+92,Arche Ruchenberg,47.0019920,8.5390300,chalet,42,42,,,,https://arche-stiftung-ruchenberg.ch/,required,,0
 1178,Arvine,46.3878800,8.060397999999999,chalet,,,,,,,,,0
 463,Auberge et Restaurant du Pont de Nant,46.25199,7.1105260,alpine_hut,,,31,,,https://aubergedupontdenant.ch/,,May 10-31 We-Su 09:00-22:00; Jun 01-Sep 21 09:00-22:00; Sep 22-Nov 02 Th-Su 09:00-22:00; Dec 27-Mar 08 We-Fr off,1
 595,Auf den Spuren des Alpzigers,47.0680910,8.9890640,alpine_hut,,,,,Ueli Schlittler,,,,0
@@ -107,8 +107,8 @@
 1027,Balmhornhütte,46.4512070,7.689620000000000,alpine_hut,,,,,SAC - CAS,,,,1
 418,Balmhütte,46.719719,7.8934150,alpine_hut,,,,,Skiklub Ringgenberg,http://www.skiclub-ringgenberg.ch/balmhuette.htm,,,1
 490,Baltschiederklause,46.3949830,7.8897950,alpine_hut,,,,,SAC - CAS,https://www.rhone.ch/baltschiederklause,,,1
-335,Bammerthütte,47.2451220,8.0956120,chalet,,,,,,,,,1
-748,Bannegghütte,47.2810080,8.5636400,wilderness_hut,18,,,permit,Holzkorporation Bannegg,,required,,1
+335,Bammerthütte,47.2451220,8.0956120,chalet,,,,,,,,,0
+748,Bannegghütte,47.2810080,8.5636400,wilderness_hut,18,,,permit,Holzkorporation Bannegg,,required,,0
 392,Bargis,46.8855450,9.8704420,chalet,,,,,,https://fewobargis.jimdofree.com/,,,0
 1488,"Basler Ferienhaus ""Bim Lerch""",46.861182999999997,9.887200000000000,chalet,,,,,"Verein Basler Ferienhaus ""Bim Lerch"", Klosters",https://www.basler-ferienhaus-klosters.ch/,,,0
 1531,Baumhaus Thurgau,47.5036360,9.21089900,chalet,,,,,,https://www.baumhaus-thurgau.ch/,,,0
@@ -907,7 +907,7 @@
 38,Kletterhütte Bockmattli,47.0994730,8.9503270,alpine_hut,10,,,,,https://www.bockmattli.ch/,,,1
 1102,Kletterhütte Pardutz,47.02650700,9.778708000000000,wilderness_hut,,,,,,https://www.kcr-online.ch/,,,1
 780,Klubhaus SC OG,47.38859300,8.591639000000001,wilderness_hut,45,,,permit,,https://www.sc-og-zuerich.ch/wp/vermietung/,required,,0
-1635,Klushütte,47.7089490,8.61633200,chalet,,,,,,http://www.klushuette.ch/,,,1
+1635,Klushütte,47.7089490,8.61633200,chalet,,,,,,http://www.klushuette.ch/,,,0
 676,Kohlplätzli,46.42583500,8.16245600000000,chalet,,,,,,,,,0
 1410,Konkordia Hütte,46.50045700,8.053207000000000,alpine_hut,155,,,,Schweizer Alpenklub SAC,https://www.konkordiahuette.ch/,,,1
 759,Kröntenhütte,46.80008300,8.575386999999999,alpine_hut,80,,,,SAC - CAS,https://www.kroentenhuette.com/,,,1
@@ -1380,7 +1380,7 @@
 405,Suls-Lobhornhütte,46.6184880,7.8690000,alpine_hut,24,,,,SAC,https://www.lobhornhuette.ch/,,,1
 1213,Sunneeggli,46.3888940,8.064591000000000,chalet,,,,,,,,,0
 1119,Sunnehüsi,46.642901000000002,7.446200000000000,wilderness_hut,18,,,,SAC Blümlisalp,,,,1
-382,Sunnehüsli,47.0362630,8.4748880,chalet,,24,,,,,,,1
+382,Sunnehüsli,47.0362630,8.4748880,chalet,,24,,,,,,,0
 634,Sur Val,46.578896,9.9229750,chalet,,,,,,https://www.ferienhaus-surval.ch,,,0
 115,Sustlihütte SAC,46.7517060,8.4707940,alpine_hut,67,,,,SAC - CAS,https://www.sustlihuette.ch/,,,1
 396,Swissyurt,47.5017360,9.2613020,chalet,,,,,Adi & Theo Brunner,https://swissyurt.ch/,,,0
@@ -1452,31 +1452,31 @@
 322,Waldhaus Rheinfelden,47.5428780,7.7916340,chalet,,,,,,,,,0
 1237,Waldhüsi,46.69098200,7.214760000000000,alpine_hut,,,,,,,,,0
 1116,Waldhüsli,47.3681970,9.41620700,alpine_hut,,,,,,,,,0
-699,Waldhütte,47.37438700,8.672240000000000,wilderness_hut,40,,,permit,Milandia,https://www.milandia.ch/lokalitaeten/waldhuette/,required,,1
-691,Waldhütte Aesch,47.33379800,8.425462000000000,wilderness_hut,64,,,permit,Holzkorporation Aesch,https://www.waldhuette-aesch.ch/,required,,1
-728,Waldhütte Au,47.4199780,8.572255999999999,wilderness_hut,30,,,permit,Stadt Opfikon,https://forsthu.ch/waldhutte-9/,required,,1
-852,Waldhütte Breite,47.466293999999998,8.65844000000000,wilderness_hut,40,,,permit,Waldhüttenverein Breite-Hakab,https://breite-hakab.ch/,required,,1
-700,Waldhütte Geeren,47.376392000000003,8.609439999999999,wilderness_hut,50,,,permit,Holzkorporation Dübendorf,,required,,1
+699,Waldhütte,47.37438700,8.672240000000000,wilderness_hut,40,,,permit,Milandia,https://www.milandia.ch/lokalitaeten/waldhuette/,required,,0
+691,Waldhütte Aesch,47.33379800,8.425462000000000,wilderness_hut,64,,,permit,Holzkorporation Aesch,https://www.waldhuette-aesch.ch/,required,,0
+728,Waldhütte Au,47.4199780,8.572255999999999,wilderness_hut,30,,,permit,Stadt Opfikon,https://forsthu.ch/waldhutte-9/,required,,0
+852,Waldhütte Breite,47.466293999999998,8.65844000000000,wilderness_hut,40,,,permit,Waldhüttenverein Breite-Hakab,https://breite-hakab.ch/,required,,0
+700,Waldhütte Geeren,47.376392000000003,8.609439999999999,wilderness_hut,50,,,permit,Holzkorporation Dübendorf,,required,,0
 71,Waldhütte Gemeinde Holderbank,47.4331270,8.1734460,chalet,,,,,Gemeinde Holderbank,https://www.holderbank.ch/index.php?option=com_content&task=view&id=18&Itemid=35,,,0
-1521,Waldhütte Herrliberg,47.30343700,8.65262600000000,wilderness_hut,40,,,permit,Holzkorporation Herrliberg,,required,,1
-702,Waldhütte Holzkorporation Erlenbach,47.31109100,8.624942000000001,wilderness_hut,40,,,permit,Holzkorporation Erlenbach,https://www.erlenbach.ch/forsthaus,required,,1
-1624,Waldhütte Häuligrueb,47.434739000000000,8.58434500000000,wilderness_hut,30,,,permit,Holzkorporation Opfikon,https://www.waldhuette-haeuligrueb.ch/,required,,1
-666,Waldhütte Höhragen,47.50559900,8.524061000000000,wilderness_hut,70,,,permit,Stadt Bülach,https://www.buelach.ch/themen/veranstaltungen_bewilligungen/veranstaltungen/a3_miete_waldhuette_hoehragen/,required,,1
-783,Waldhütte Kindhausen,47.41042800,8.6732960,wilderness_hut,40,,,permit,Holzkorporation Hegnau,,required,,1
+1521,Waldhütte Herrliberg,47.30343700,8.65262600000000,wilderness_hut,40,,,permit,Holzkorporation Herrliberg,,required,,0
+702,Waldhütte Holzkorporation Erlenbach,47.31109100,8.624942000000001,wilderness_hut,40,,,permit,Holzkorporation Erlenbach,https://www.erlenbach.ch/forsthaus,required,,0
+1624,Waldhütte Häuligrueb,47.434739000000000,8.58434500000000,wilderness_hut,30,,,permit,Holzkorporation Opfikon,https://www.waldhuette-haeuligrueb.ch/,required,,0
+666,Waldhütte Höhragen,47.50559900,8.524061000000000,wilderness_hut,70,,,permit,Stadt Bülach,https://www.buelach.ch/themen/veranstaltungen_bewilligungen/veranstaltungen/a3_miete_waldhuette_hoehragen/,required,,0
+783,Waldhütte Kindhausen,47.41042800,8.6732960,wilderness_hut,40,,,permit,Holzkorporation Hegnau,,required,,0
 625,Waldhütte Lengnau,47.5159920,8.3077510,wilderness_hut,,,,,,https://www.lengnau-ag.ch/waldhuette,,,0
-674,Waldhütte Maur,47.354146,8.655735999999999,wilderness_hut,70,,,permit,Holzkorporation Maur,http://www.waldhuettemaur.ch/,required,,1
+674,Waldhütte Maur,47.354146,8.655735999999999,wilderness_hut,70,,,permit,Holzkorporation Maur,http://www.waldhuettemaur.ch/,required,,0
 368,Waldhütte Mettmenschongau,47.2668340,8.2917890,chalet,,,,,,,,,0
-671,Waldhütte Männedorf,47.26441400,8.70745200000000,wilderness_hut,130,,,permit,Waldkorporation Männedorf,https://waldhütte-männedorf.ch/,required,,1
-1522,Waldhütte Näniker Hard,47.3749110,8.707355,wilderness_hut,35,,,permit,Stadt Uster,,required,,1
-1586,Waldhütte Oberwagenburg,47.492545999999997,8.636600000000000,wilderness_hut,30,,,permit,Gemeindeverwaltung Oberembrach,https://www.oberembrach.ch/sehensfreizeit/863,required,,1
-668,Waldhütte Pfannenstiel,47.29520000,8.66801800,wilderness_hut,40,,,permit,Forstkorporation Pfannenstiel,http://www.waldhuette-pfannenstiel.ch/,required,,1
-1591,Waldhütte Ziegelhöhe,47.398445000000002,8.573926000000000,wilderness_hut,30,,,permit,Hubgenossenschaft Schwamendingen,https://www.waldhütte-ziegelhöhe.ch/,required,,1
+671,Waldhütte Männedorf,47.26441400,8.70745200000000,wilderness_hut,130,,,permit,Waldkorporation Männedorf,https://waldhütte-männedorf.ch/,required,,0
+1522,Waldhütte Näniker Hard,47.3749110,8.707355,wilderness_hut,35,,,permit,Stadt Uster,,required,,0
+1586,Waldhütte Oberwagenburg,47.492545999999997,8.636600000000000,wilderness_hut,30,,,permit,Gemeindeverwaltung Oberembrach,https://www.oberembrach.ch/sehensfreizeit/863,required,,0
+668,Waldhütte Pfannenstiel,47.29520000,8.66801800,wilderness_hut,40,,,permit,Forstkorporation Pfannenstiel,http://www.waldhuette-pfannenstiel.ch/,required,,0
+1591,Waldhütte Ziegelhöhe,47.398445000000002,8.573926000000000,wilderness_hut,30,,,permit,Hubgenossenschaft Schwamendingen,https://www.waldhütte-ziegelhöhe.ch/,required,,0
 60,Weisshornhütte SAC,46.0859640,7.7435850,alpine_hut,31,,,,SAC - CAS,https://www.sac-basel.ch/huetten/weisshornhuette,,,1
 641,Weissmieshütte SAC,46.1437630,7.9778780,alpine_hut,125,,,,SAC - CAS,https://www.weissmieshuette.ch/,,,1
 1306,Wettsteinhaus,46.94596000,8.99470500000000,chalet,,,,,,https://www.ferienhaus-braunwald.ch/,,,0
 467,Wildhornhütte,46.3792240,7.3879990,alpine_hut,96,,,,SAC,https://www.wildhornhuette.ch/,,"Jan-Feb closed,Oct-Dec closed",1
 918,Wildmannli Hütte,47.1702290,9.254434000000000,alpine_hut,,,,,,http://www.wildmannli.ch,,,0
-1023,Wildsauenhütte,47.632835000000000,9.159719000000001,wilderness_hut,45,,,private,Bürgergemeinde Kreuzlingen,https://wildsauenhuette.ch,required,,1
+1023,Wildsauenhütte,47.632835000000000,9.159719000000001,wilderness_hut,45,,,private,Bürgergemeinde Kreuzlingen,https://wildsauenhuette.ch,required,,0
 134,Wildstrubelhütte,46.3830190,7.4676660,alpine_hut,68,,,,SAC,https://www.wildstrubelhuette.ch/,,,1
 1611,Windegghütten SAC,46.6949870,8.348034000000000,alpine_hut,41,,,,SAC - CAS,https://www.windegghuette.ch/,,,1
 406,Windgällenhütte,46.7902020,8.7557270,alpine_hut,55,,,,AACZ,https://www.windgaellenhuette.ch/,,,1

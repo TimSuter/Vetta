@@ -26,6 +26,7 @@ from find_nearby_huts import (
     DEFAULT_INPUT,
     METRIC_CRS,
     WGS84_CRS,
+    filter_huts_by_inclusion_column,
     filter_huts_by_inclusion_csv,
     find_input_hut,
     load_huts,
@@ -910,10 +911,13 @@ def main() -> None:
         print(f"Hut inclusion template written to: {args.write_inclusion_template}")
         return
 
+    before_count = len(huts)
     if args.inclusion_csv:
-        before_count = len(huts)
         huts = filter_huts_by_inclusion_csv(huts, args.inclusion_csv)
         print(f"Included {len(huts)} of {before_count} huts from: {args.inclusion_csv}")
+    else:
+        huts = filter_huts_by_inclusion_column(huts)
+        print(f"Included {len(huts)} of {before_count} huts from: {args.huts}")
 
     graph = load_or_build_graph(args)
 
