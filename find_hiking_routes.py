@@ -22,13 +22,16 @@ from shapely import wkt
 
 from find_nearby_huts import (
     DEFAULT_HUT_NAME,
+    DEFAULT_INCLUSION_CSV,
     DEFAULT_INPUT,
     METRIC_CRS,
     WGS84_CRS,
+    filter_huts_by_inclusion_csv,
     find_input_hut,
     load_huts,
     marker_points,
     nearest_huts,
+    write_hut_inclusion_template,
 )
 
 
@@ -103,6 +106,26 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--hut", default=DEFAULT_HUT_NAME)
     parser.add_argument("--huts", type=Path, default=DEFAULT_INPUT)
+    parser.add_argument(
+        "--inclusion-csv",
+        type=Path,
+        help=(
+            "Optional hut review CSV with include_in_evaluation. "
+            "Rows set to 1/true/yes are included in routing."
+        ),
+    )
+    parser.add_argument(
+        "--write-inclusion-template",
+        type=Path,
+        nargs="?",
+        const=DEFAULT_INCLUSION_CSV,
+        metavar="CSV",
+        help=(
+            "Write a hut review CSV with names, coordinates, metadata, and "
+            "include_in_evaluation initialized to 1, then exit. "
+            f"Defaults to {DEFAULT_INCLUSION_CSV}."
+        ),
+    )
     parser.add_argument("--wanderwege-url", default=SWISSTOPO_WANDERWEGE_URL)
     parser.add_argument("--zip-path", type=Path, default=DEFAULT_ZIP)
     parser.add_argument("--gpkg-path", type=Path, default=DEFAULT_GPKG)
@@ -879,10 +902,20 @@ def create_itinerary_map(
 def main() -> None:
     args = parse_args()
     print("Starting hiking route generation.")
-    graph = load_or_build_graph(args)
     print(f"Loading huts from: {args.huts}")
     huts = load_huts(args.huts)
     print(f"Loaded {len(huts)} huts.")
+    if args.write_inclusion_template:
+        write_hut_inclusion_template(huts, args.write_inclusion_template)
+        print(f"Hut inclusion template written to: {args.write_inclusion_template}")
+        return
+
+    if args.inclusion_csv:
+        before_count = len(huts)
+        huts = filter_huts_by_inclusion_csv(huts, args.inclusion_csv)
+        print(f"Included {len(huts)} of {before_count} huts from: {args.inclusion_csv}")
+
+    graph = load_or_build_graph(args)
 
     if args.all_huts:
         source_indices = huts.index.astype(int).tolist()

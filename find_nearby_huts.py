@@ -11,9 +11,27 @@ import pandas as pd
 DEFAULT_HUT_NAME = "Vermigel Hütte"
 DEFAULT_RADIUS_KM = 30.0
 DEFAULT_INPUT = Path("my_geodataframe.pkl")
+DEFAULT_INCLUSION_CSV = Path("hut_inclusion.csv")
 DEFAULT_OUTPUT = Path("nearby_huts_map.html")
 METRIC_CRS = "EPSG:2056"
 WGS84_CRS = "EPSG:4326"
+HUT_INCLUSION_COLUMN = "include_in_evaluation"
+HUT_REVIEW_COLUMNS = [
+    "hut_index",
+    "name",
+    "latitude",
+    "longitude",
+    "tourism",
+    "capacity",
+    "beds",
+    "capacity:persons",
+    "access",
+    "operator",
+    "website",
+    "reservation",
+    "opening_hours",
+    HUT_INCLUSION_COLUMN,
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -43,6 +61,23 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_OUTPUT,
         help=f"Output HTML map path. Defaults to {DEFAULT_OUTPUT}.",
     )
+    parser.add_argument(
+        "--inclusion-csv",
+        type=Path,
+        help=(
+            "Optional CSV with a column named include_in_evaluation. "
+            "Rows set to 1/true/yes are kept."
+        ),
+    )
+    parser.add_argument(
+        "--write-inclusion-template",
+        type=Path,
+        metavar="CSV",
+        help=(
+            "Write a hut review CSV with names, coordinates, metadata, and "
+            "include_in_evaluation initialized to 1."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -57,6 +92,59 @@ def load_huts(path: Path) -> gpd.GeoDataFrame:
     if gdf.crs is None:
         gdf = gdf.set_crs(WGS84_CRS)
     return gdf.dropna(subset=["geometry"]).reset_index(drop=True)
+
+
+def truthy_inclusion_mask(values: pd.Series) -> pd.Series:
+    normalized = values.fillna(0).astype(str).str.strip().str.casefold()
+    return normalized.isin({"1", "true", "t", "yes", "y", "include"})
+
+
+def filter_huts_by_inclusion_csv(
+    gdf: gpd.GeoDataFrame,
+    path: Path,
+    include_column: str = HUT_INCLUSION_COLUMN,
+) -> gpd.GeoDataFrame:
+    selections = pd.read_csv(path)
+    if include_column not in selections.columns:
+        raise ValueError(f"{path} must contain an {include_column!r} column.")
+
+    included = selections[truthy_inclusion_mask(selections[include_column])]
+    if "hut_index" in included.columns:
+        hut_indices = pd.to_numeric(included["hut_index"], errors="coerce").dropna().astype(int)
+        result = gdf[gdf.index.isin(hut_indices)]
+    elif "name" in included.columns:
+        names = set(included["name"].dropna().astype(str))
+        result = gdf[gdf["name"].astype(str).isin(names)]
+    else:
+        raise ValueError(f"{path} must contain either a 'hut_index' or 'name' column.")
+
+    return result
+
+
+def write_hut_inclusion_template(gdf: gpd.GeoDataFrame, path: Path) -> None:
+    points = marker_points(gdf)
+    review = pd.DataFrame(
+        {
+            "hut_index": gdf.index.astype(int),
+            "name": gdf["name"],
+            "latitude": points.y,
+            "longitude": points.x,
+            HUT_INCLUSION_COLUMN: 1,
+        }
+    )
+
+    for column in HUT_REVIEW_COLUMNS:
+        if column in review.columns:
+            continue
+        if column in gdf.columns:
+            review[column] = gdf[column]
+        else:
+            review[column] = pd.NA
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    review[HUT_REVIEW_COLUMNS].sort_values(
+        ["name", "hut_index"], na_position="last"
+    ).to_csv(path, index=False)
 
 
 def find_input_hut(gdf: gpd.GeoDataFrame, hut_name: str) -> pd.Series:
@@ -144,6 +232,15 @@ def create_map(
 def main() -> None:
     args = parse_args()
     huts = load_huts(args.input)
+    if args.write_inclusion_template:
+        write_hut_inclusion_template(huts, args.write_inclusion_template)
+        print(f"Hut inclusion template written to: {args.write_inclusion_template}")
+        return
+
+    if args.inclusion_csv:
+        huts = filter_huts_by_inclusion_csv(huts, args.inclusion_csv)
+        print(f"Loaded {len(huts)} huts included by: {args.inclusion_csv}")
+
     input_hut = find_input_hut(huts, args.hut)
     nearby = nearest_huts(huts, input_hut, args.radius_km)
 
