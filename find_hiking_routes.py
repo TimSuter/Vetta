@@ -52,7 +52,7 @@ DEFAULT_ROUTES = Path("hut_hiking_routes.csv")
 DEFAULT_ITINERARIES = Path("hut_hiking_itineraries.csv")
 DEFAULT_MAP = Path("hiking_routes_map.html")
 DOWNLOAD_CHUNK_SIZE = 1024 * 1024
-ROUTE_CACHE_SCHEMA_VERSION = "1"
+ROUTE_CACHE_SCHEMA_VERSION = "3"
 
 DEFAULT_DAYS = 3
 DEFAULT_MAX_MAP_ITINERARIES = 25
@@ -69,6 +69,8 @@ ROUTE_COLUMNS = [
     "source_hut",
     "destination_index",
     "destination_hut",
+    "max_hiking_category",
+    "difficulty_status",
     "duration_h",
     "distance_km",
     "ascent_m",
@@ -86,10 +88,24 @@ ITINERARY_COLUMNS = [
     "total_distance_km",
     "total_ascent_m",
     "total_descent_m",
+    "max_hiking_category",
+    "difficulty_status",
     "leg_durations_h",
     "leg_distances_km",
+    "leg_max_hiking_categories",
     "leg_geometry_wkts",
 ]
+
+GRAPH_SCHEMA_VERSION = "3"
+HIKING_CATEGORY_RANK_BY_LABEL = {
+    "Wanderweg": 1,
+    "Bergwanderweg": 2,
+    "Alpinwanderweg": 3,
+}
+HIKING_CATEGORY_LABEL_BY_RANK = {
+    rank: category
+    for category, rank in HIKING_CATEGORY_RANK_BY_LABEL.items()
+}
 
 
 def is_valid_zip(path: Path) -> bool:
@@ -277,6 +293,32 @@ def coord_z(coord: tuple[float, ...]) -> float | None:
     return None
 
 
+def hiking_category_label(rank: int | None) -> str:
+    if rank is None:
+        return "unknown"
+    return HIKING_CATEGORY_LABEL_BY_RANK.get(rank, "unknown")
+
+
+def hiking_category_rank(label: Any) -> int | None:
+    if pd.isna(label):
+        return None
+    return HIKING_CATEGORY_RANK_BY_LABEL.get(str(label).strip())
+
+
+def swisstopo_wanderwege_category_rank(value: Any) -> int | None:
+    if pd.isna(value):
+        return None
+    return HIKING_CATEGORY_RANK_BY_LABEL.get(str(value).strip())
+
+
+def combine_difficulty_status(known_edges: int, unknown_edges: int) -> str:
+    if unknown_edges == 0 and known_edges > 0:
+        return "mapped"
+    if known_edges > 0:
+        return "partial"
+    return "unknown"
+
+
 def edge_seconds(
     from_coord: tuple[float, ...],
     to_coord: tuple[float, ...],
@@ -299,6 +341,36 @@ def edge_seconds(
     return seconds
 
 
+def add_graph_edge(
+    graph: nx.DiGraph,
+    from_key: Any,
+    to_key: Any,
+    length_m: float,
+    seconds: float,
+    category_rank: int | None,
+    difficulty_source: str | None,
+) -> None:
+    existing = graph.edges[from_key, to_key] if graph.has_edge(from_key, to_key) else None
+    if existing is not None and float(existing["seconds"]) <= seconds:
+        existing_rank = existing.get("hiking_category_rank")
+        if category_rank is not None and (
+            existing_rank is None or int(category_rank) > int(existing_rank)
+        ):
+            existing["hiking_category_rank"] = category_rank
+            existing["hiking_category"] = hiking_category_label(category_rank)
+            existing["difficulty_source"] = difficulty_source
+        return
+
+    edge_attrs = {
+        "length_m": length_m,
+        "seconds": seconds,
+        "hiking_category_rank": category_rank,
+        "hiking_category": hiking_category_label(category_rank),
+        "difficulty_source": difficulty_source,
+    }
+    graph.add_edge(from_key, to_key, **edge_attrs)
+
+
 def build_graph_from_gpkg(
     gpkg_path: Path,
     walking_speed_kmh: float,
@@ -307,6 +379,8 @@ def build_graph_from_gpkg(
 ) -> nx.DiGraph:
     print(f"Building NetworkX graph from: {gpkg_path}")
     graph = nx.DiGraph()
+    graph.graph["schema_version"] = GRAPH_SCHEMA_VERSION
+    graph.graph["difficulty_mapping"] = "swisstopo_wanderwege_category"
     layers = pyogrio.list_layers(gpkg_path)
     print(f"Found {len(layers)} GeoPackage layers.")
 
@@ -325,14 +399,16 @@ def build_graph_from_gpkg(
             trails = trails.to_crs(METRIC_CRS)
 
         feature_count = 0
-        for geometry in trails.geometry:
+        for _, trail in trails.iterrows():
             feature_count += 1
             if feature_count % 10_000 == 0:
                 print(
                     f"Processed {feature_count}/{len(trails)} features in {layer_name}; "
                     f"graph has {graph.number_of_nodes()} nodes and {graph.number_of_edges()} edges."
                 )
-            for line in iter_lines(geometry):
+            category_rank = swisstopo_wanderwege_category_rank(trail.get("wanderwege"))
+            difficulty_source = "swisstopo:wanderwege" if category_rank is not None else None
+            for line in iter_lines(trail.geometry):
                 coords = list(line.coords)
                 for from_coord, to_coord in zip(coords[:-1], coords[1:]):
                     from_key = coordinate_key(from_coord)
@@ -358,11 +434,12 @@ def build_graph_from_gpkg(
                         y=float(to_coord[1]),
                         z=coord_z(to_coord),
                     )
-                    graph.add_edge(
+                    add_graph_edge(
+                        graph,
                         from_key,
                         to_key,
-                        length_m=length_m,
-                        seconds=edge_seconds(
+                        length_m,
+                        edge_seconds(
                             from_coord,
                             to_coord,
                             length_m,
@@ -370,12 +447,15 @@ def build_graph_from_gpkg(
                             ascent_m_per_hour,
                             descent_m_per_hour,
                         ),
+                        category_rank,
+                        difficulty_source,
                     )
-                    graph.add_edge(
+                    add_graph_edge(
+                        graph,
                         to_key,
                         from_key,
-                        length_m=length_m,
-                        seconds=edge_seconds(
+                        length_m,
+                        edge_seconds(
                             to_coord,
                             from_coord,
                             length_m,
@@ -383,6 +463,8 @@ def build_graph_from_gpkg(
                             ascent_m_per_hour,
                             descent_m_per_hour,
                         ),
+                        category_rank,
+                        difficulty_source,
                     )
         print(
             f"Finished layer {layer_name}; graph has "
@@ -403,11 +485,17 @@ def load_or_build_graph(args: argparse.Namespace) -> nx.DiGraph:
         print(f"Loading cached graph: {args.graph_path}")
         with args.graph_path.open("rb") as file:
             graph = pickle.load(file)
-        print(
-            f"Loaded cached graph with {graph.number_of_nodes()} nodes and "
-            f"{graph.number_of_edges()} directed edges."
-        )
-        return graph
+        if graph.graph.get("schema_version") != GRAPH_SCHEMA_VERSION:
+            print(
+                "Cached graph does not include the current difficulty metadata; "
+                "rebuilding it."
+            )
+        else:
+            print(
+                f"Loaded cached graph with {graph.number_of_nodes()} nodes and "
+                f"{graph.number_of_edges()} directed edges."
+            )
+            return graph
 
     print("Cached graph missing or --rebuild-graph was passed.")
     download_file(args.wanderwege_url, args.zip_path)
@@ -447,16 +535,25 @@ def nearest_graph_nodes(graph: nx.DiGraph, points: gpd.GeoSeries) -> dict[int, t
     return result
 
 
-def path_stats(graph: nx.DiGraph, path: list[Any]) -> tuple[float, float, float, float]:
+def path_stats(graph: nx.DiGraph, path: list[Any]) -> tuple[float, float, float, float, int | None, str]:
     length_m = 0.0
     seconds = 0.0
     ascent_m = 0.0
     descent_m = 0.0
+    max_category_rank: int | None = None
+    known_difficulty_edges = 0
+    unknown_difficulty_edges = 0
 
     for from_node, to_node in zip(path[:-1], path[1:]):
         edge = graph.edges[from_node, to_node]
         length_m += float(edge["length_m"])
         seconds += float(edge["seconds"])
+        category_rank = edge.get("hiking_category_rank")
+        if category_rank is None:
+            unknown_difficulty_edges += 1
+        else:
+            known_difficulty_edges += 1
+            max_category_rank = max(max_category_rank or 0, int(category_rank))
 
         from_z = graph.nodes[from_node].get("z")
         to_z = graph.nodes[to_node].get("z")
@@ -468,7 +565,14 @@ def path_stats(graph: nx.DiGraph, path: list[Any]) -> tuple[float, float, float,
         else:
             descent_m += abs(delta)
 
-    return length_m / 1000, seconds / 3600, ascent_m, descent_m
+    return (
+        length_m / 1000,
+        seconds / 3600,
+        ascent_m,
+        descent_m,
+        max_category_rank,
+        combine_difficulty_status(known_difficulty_edges, unknown_difficulty_edges),
+    )
 
 
 def path_wgs84(graph: nx.DiGraph, path: list[Any]) -> LineString:
@@ -519,7 +623,7 @@ def build_routes_for_source(
             continue
 
         path = paths[destination_node]
-        distance_km, duration_h, ascent_m, descent_m = path_stats(graph, path)
+        distance_km, duration_h, ascent_m, descent_m, max_category_rank, difficulty_status = path_stats(graph, path)
         if not min_hours <= duration_h <= max_hours:
             continue
 
@@ -530,6 +634,8 @@ def build_routes_for_source(
                 "source_hut": source_hut.get("name"),
                 "destination_index": int(destination_index),
                 "destination_hut": destination_hut.get("name"),
+                "max_hiking_category": hiking_category_label(max_category_rank),
+                "difficulty_status": difficulty_status,
                 "duration_h": round(duration_h, 3),
                 "distance_km": round(distance_km, 3),
                 "ascent_m": round(ascent_m, 1),
@@ -614,6 +720,8 @@ def initialize_route_cache(path: Path) -> None:
                 source_hut TEXT,
                 destination_index INTEGER NOT NULL,
                 destination_hut TEXT,
+                max_hiking_category TEXT NOT NULL,
+                difficulty_status TEXT NOT NULL,
                 duration_h REAL NOT NULL,
                 distance_km REAL NOT NULL,
                 ascent_m REAL NOT NULL,
@@ -631,6 +739,18 @@ def initialize_route_cache(path: Path) -> None:
                 ON routes(run_id, destination_index);
             """
         )
+        existing_columns = {
+            row[1]
+            for row in connection.execute("PRAGMA table_info(routes)").fetchall()
+        }
+        if "max_hiking_category" not in existing_columns:
+            connection.execute(
+                "ALTER TABLE routes ADD COLUMN max_hiking_category TEXT NOT NULL DEFAULT 'unknown'"
+            )
+        if "difficulty_status" not in existing_columns:
+            connection.execute(
+                "ALTER TABLE routes ADD COLUMN difficulty_status TEXT NOT NULL DEFAULT 'unknown'"
+            )
         connection.execute(
             """
             INSERT INTO route_cache_metadata(key, value)
@@ -705,6 +825,8 @@ def write_routes_to_route_cache(
                 source_hut,
                 destination_index,
                 destination_hut,
+                max_hiking_category,
+                difficulty_status,
                 duration_h,
                 distance_km,
                 ascent_m,
@@ -713,7 +835,7 @@ def write_routes_to_route_cache(
                 destination_snap_m,
                 geometry_wkt
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             rows,
         )
@@ -847,6 +969,19 @@ def build_multiday_itineraries(
     itinerary_rows: list[dict[str, Any]] = []
     for itinerary_id, (_, hut_indices, legs) in enumerate(partials, start=1):
         hut_names = [str(huts.loc[index].get("name")) for index in hut_indices]
+        leg_hiking_categories = [str(leg["max_hiking_category"]) for leg in legs]
+        known_leg_ranks = [
+            rank
+            for rank in (hiking_category_rank(category) for category in leg_hiking_categories)
+            if rank is not None
+        ]
+        difficulty_statuses = {str(leg["difficulty_status"]) for leg in legs}
+        if difficulty_statuses == {"mapped"}:
+            difficulty_status = "mapped"
+        elif known_leg_ranks:
+            difficulty_status = "partial"
+        else:
+            difficulty_status = "unknown"
         itinerary_rows.append(
             {
                 "itinerary_id": itinerary_id,
@@ -857,8 +992,11 @@ def build_multiday_itineraries(
                 "total_distance_km": round(sum(float(leg["distance_km"]) for leg in legs), 3),
                 "total_ascent_m": round(sum(float(leg["ascent_m"]) for leg in legs), 1),
                 "total_descent_m": round(sum(float(leg["descent_m"]) for leg in legs), 1),
+                "max_hiking_category": hiking_category_label(max(known_leg_ranks) if known_leg_ranks else None),
+                "difficulty_status": difficulty_status,
                 "leg_durations_h": " | ".join(f"{float(leg['duration_h']):.3f}" for leg in legs),
                 "leg_distances_km": " | ".join(f"{float(leg['distance_km']):.3f}" for leg in legs),
+                "leg_max_hiking_categories": " | ".join(leg_hiking_categories),
                 "leg_geometry_wkts": " || ".join(str(leg["geometry_wkt"]) for leg in legs),
             }
         )
@@ -900,6 +1038,7 @@ def create_map(routes: pd.DataFrame, huts: gpd.GeoDataFrame, source_index: int, 
         color = colors[count % len(colors)]
         popup = (
             f"<b>{row['destination_hut']}</b><br>"
+            f"Max hiking category: {row['max_hiking_category']} ({row['difficulty_status']})<br>"
             f"Duration: {row['duration_h']:.1f} h<br>"
             f"Distance: {row['distance_km']:.1f} km<br>"
             f"Ascent: {row['ascent_m']:.0f} m<br>"
@@ -1041,6 +1180,7 @@ def create_itinerary_map(
         leg_geometries = str(itinerary["leg_geometry_wkts"]).split(" || ")
         leg_durations = str(itinerary["leg_durations_h"]).split(" | ")
         leg_distances = str(itinerary["leg_distances_km"]).split(" | ")
+        leg_hiking_categories = str(itinerary["leg_max_hiking_categories"]).split(" | ")
 
         itinerary_id = int(itinerary["itinerary_id"])
         label = (
@@ -1050,6 +1190,7 @@ def create_itinerary_map(
         summary = (
             f"<b>Itinerary {int(itinerary['itinerary_id'])}</b><br>"
             f"{' -> '.join(hut_names)}<br>"
+            f"Max hiking category: {itinerary['max_hiking_category']} ({itinerary['difficulty_status']})<br>"
             f"Total duration: {float(itinerary['total_duration_h']):.1f} h<br>"
             f"Total distance: {float(itinerary['total_distance_km']):.1f} km"
         )
@@ -1062,9 +1203,15 @@ def create_itinerary_map(
             color = day_colors[(day_index - 1) % len(day_colors)]
             duration = leg_durations[day_index - 1] if day_index <= len(leg_durations) else "?"
             distance = leg_distances[day_index - 1] if day_index <= len(leg_distances) else "?"
+            hiking_category = (
+                leg_hiking_categories[day_index - 1]
+                if day_index <= len(leg_hiking_categories)
+                else "unknown"
+            )
             leg_popup = (
                 f"<b>Itinerary {itinerary_id}, day {day_index}</b><br>"
                 f"{hut_names[day_index - 1]} -> {hut_names[day_index]}<br>"
+                f"Max hiking category: {hiking_category}<br>"
                 f"Duration: {float(duration):.1f} h<br>"
                 f"Distance: {float(distance):.1f} km<br><br>"
                 f"{summary}"
