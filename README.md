@@ -17,7 +17,7 @@ Users can plan itineraries by specifying:
 - maximum hiking duration per day
 - maximum ascent per day
 - maximum descent per day
-- maximum SAC trail difficulty
+- maximum hiking category
 - optional start hut
 - optional end hut
 
@@ -58,11 +58,141 @@ Useful itinerary inputs:
 .\.venv\Scripts\python.exe find_hiking_routes.py --days 3 --min-hours 5 --max-hours 8 --neighbor-radius-km 20
 ```
 
-Trail difficulty filtering is intentionally left out for now.
+Route legs include the hardest swisstopo hiking category found on the route:
+`Wanderweg`, `Bergwanderweg`, `Alpinwanderweg`, or `unknown`.
+
+## Route Database
+
+`fill_hiking_route_database.py` generates the app-facing SQLite route database.
+It uses `find_hiking_routes.py` as the routing backend, but the final app should
+query only the SQLite database and should not load the full NetworkX trail graph.
+
+The intended workflow is:
+
+1. Offline batch generation loads the included huts.
+2. It loads or builds the cached swisstopo trail graph.
+3. It calculates single-day hut-to-hut routes for every included start hut.
+4. It writes the precomputed route legs to SQLite.
+5. The app reads the SQLite `routes` table to find accessible huts and route
+   geometries.
+
+Default generation command:
+
+```powershell
+.\.venv\Scripts\python.exe fill_hiking_route_database.py
+```
+
+By default this writes to:
+
+```text
+data/hiking_routes.sqlite
+```
+
+Default route constraints:
+
+- minimum duration: 2 hours
+- maximum duration: 14 hours
+- nearest-neighbor hut radius: 30 km
+- included huts only: `include_in_evaluation == 1`
+
+To use a separate inclusion review CSV:
+
+```powershell
+.\.venv\Scripts\python.exe fill_hiking_route_database.py --inclusion-csv .\hut_inclusion.csv
+```
+
+To force a graph rebuild before filling the database:
+
+```powershell
+.\.venv\Scripts\python.exe fill_hiking_route_database.py --rebuild-graph
+```
+
+The script clears and refills the generated `routes` table by default, so stale
+route rows from previous constraints do not remain in the database. Use
+`--append` only when you explicitly want to keep existing rows.
+
+### Database Schema
+
+The main table is `routes`:
+
+```sql
+CREATE TABLE routes (
+    start_hut TEXT NOT NULL,
+    destination_hut TEXT NOT NULL,
+    duration_h REAL NOT NULL,
+    distance_km REAL NOT NULL,
+    ascent_m REAL NOT NULL,
+    descent_m REAL NOT NULL,
+    max_hiking_category TEXT NOT NULL,
+    difficulty_status TEXT NOT NULL,
+    geometry_wkt TEXT NOT NULL,
+    PRIMARY KEY (start_hut, destination_hut)
+);
+```
+
+`max_hiking_category` is the hardest swisstopo category on the route, ordered as:
+
+```text
+Wanderweg < Bergwanderweg < Alpinwanderweg
+```
+
+`difficulty_status` indicates whether the route category was fully available:
+
+- `mapped`: every route segment had a recognized hiking category
+- `partial`: at least one segment had a recognized category, but not all did
+- `unknown`: no recognized category was available for the route
+
+`geometry_wkt` stores the precomputed route geometry in WGS84 as WKT. The app can
+read this directly for map rendering without recalculating the route.
+
+The script also writes `route_database_metadata`, which records values such as
+the fill time, included hut count, graph path, and route constraints.
+
+### Querying Routes
+
+Find all precomputed routes from one hut:
+
+```sql
+SELECT
+    destination_hut,
+    duration_h,
+    distance_km,
+    ascent_m,
+    descent_m,
+    max_hiking_category,
+    difficulty_status
+FROM routes
+WHERE start_hut = ?
+ORDER BY duration_h;
+```
+
+Apply app-level filters directly in SQLite:
+
+```sql
+SELECT *
+FROM routes
+WHERE start_hut = ?
+  AND duration_h <= ?
+  AND ascent_m <= ?
+  AND descent_m <= ?
+ORDER BY duration_h;
+```
+
+Get the stored route geometry for a selected route:
+
+```sql
+SELECT geometry_wkt
+FROM routes
+WHERE start_hut = ?
+  AND destination_hut = ?;
+```
+
+The full swisstopo graph is only needed when generating or refreshing the
+database. Normal app requests should use these SQLite queries.
 
 ### Local planner
 
-- Read the precomputed route-leg table.
+- Read the precomputed SQLite route database.
 - Build a hut graph where nodes are huts and edges are feasible daily hikes.
 - Search for multiday itineraries that satisfy user constraints.
 

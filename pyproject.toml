@@ -28,4 +28,9 @@ api = ["fastapi", "uvicorn"]
 testpaths = ["tests"]
 
 [tool.setuptools]
-py-modules = ["load_hut_data", "find_nearby_huts", "find_hiking_routes"]
+py-modules = [
+  "load_hut_data",
+  "find_nearby_huts",
+  "find_hiking_routes",
+  "fill_hiking_route_database",
+]
