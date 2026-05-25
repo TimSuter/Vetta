@@ -190,6 +190,93 @@ WHERE start_hut = ?
 The full swisstopo graph is only needed when generating or refreshing the
 database. Normal app requests should use these SQLite queries.
 
+## Web Application
+
+The first web application slice is a FastAPI backend with a responsive static
+frontend in `web/`. The backend reads `data/hiking_routes.sqlite`, searches the
+precomputed single-day route legs, and returns matching one-day or multiday hut
+chains. It does not load the full swisstopo graph.
+
+Install the API extras if they are not already available:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[api]"
+```
+
+Run the local website:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app:app --reload
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8000
+```
+
+If the server was already running, stop the existing process before starting it
+again. On Windows, a stale Uvicorn process can leave the port unavailable and
+raise an error such as `WinError 10013`.
+
+Find Python processes:
+
+```powershell
+Get-Process python
+```
+
+Stop the stale process by its process id:
+
+```powershell
+Stop-Process -Id <PROCESS_ID>
+```
+
+Then start Uvicorn again:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app:app --reload
+```
+
+If port `8000` is still blocked, run the app on another local port:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn app:app --reload --host 127.0.0.1 --port 8080
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8080
+```
+
+The UI accepts:
+
+- starting hut
+- number of hiking days
+- minimum and maximum hiking time per day
+- minimum and maximum elevation change per day
+
+When no route is selected, the map shows all huts available in the SQLite route
+database. Search results stay visible as a list, and the first route option is
+selected automatically after each search. Selecting a different route card loads
+its stored route geometry from SQLite and draws it on the map. The map currently
+uses OpenStreetMap as a stable base layer; the swisstopo hiking map can be added
+once the basic map flow is solid.
+
+The current elevation-change filter uses `ascent_m + descent_m` for each day.
+Results are assembled from the SQLite `routes` table and shown as candidate
+itineraries. The API ranks matching itineraries by how closely each day's hiking
+time matches the midpoint of the requested time range. For example, a 4 to 8
+hour input targets 6 hours per day, and routes with daily legs closest to 6
+hours appear first.
+
+For the longer-term cross-platform app direction, the UI should move toward an
+Ionic React frontend with Capacitor. Ionic provides mobile-ready web components
+for responsive browser use, and Capacitor can later package the same web app for
+iOS and Android. A Windows desktop package can be added later with a desktop web
+wrapper such as Tauri or Electron while keeping the API and route database model
+unchanged.
+
 ### Local planner
 
 - Read the precomputed SQLite route database.

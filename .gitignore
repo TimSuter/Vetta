@@ -9,6 +9,7 @@ data/swisstopo_wanderwege/*.gpkg
 data/swisstopo_wanderwege/*.gpkg.zip
 data/swisstopo_wanderwege/*_graph.pkl
 data/swisstopo_wanderwege/*.sqlite
+data/*.sqlite
 
 *.pkl
 *.html

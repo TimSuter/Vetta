@@ -33,4 +33,5 @@ py-modules = [
   "find_nearby_huts",
   "find_hiking_routes",
   "fill_hiking_route_database",
+  "app",
 ]
