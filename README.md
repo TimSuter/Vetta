@@ -1,10 +1,10 @@
-Vetta
+ViaMontana
 =====
 
-Vetta is a local-first multiday hiking planner between Swiss mountain huts.
+ViaMontana is a local-first multiday hiking planner between Swiss mountain huts.
 
 The first version uses precomputed hut-to-hut route edges. During offline
-preprocessing, Vetta loads hut data, loads or builds a hiking trail graph,
+preprocessing, ViaMontana loads hut data, loads or builds a hiking trail graph,
 precomputes feasible daily hiking legs between nearby huts, and saves those
 route legs to disk.
 
@@ -260,8 +260,20 @@ When no route is selected, the map shows all huts available in the SQLite route
 database. Search results stay visible as a list, and the first route option is
 selected automatically after each search. Selecting a different route card loads
 its stored route geometry from SQLite and draws it on the map. The map currently
-uses OpenStreetMap as a stable base layer; the swisstopo hiking map can be added
-once the basic map flow is solid.
+uses swisstopo's color base map with the swisstopo hiking trail layer as an
+overlay.
+
+The web UI includes the ViaMontana logo from `media/logo.png` and uses a
+matching red-and-white visual theme. The map source toggle can switch between
+swisstopo and OpenStreetMap; the swisstopo hiking trail overlay is shown only
+with the swisstopo base map. Planned route legs are drawn as dashed lines in
+colors distinct from swisstopo's hiking-path difficulty colors so the underlying
+trail categories remain visible. Each route leg in the result list includes a
+matching dashed color swatch.
+
+Hut markers are interactive in both the default all-huts view and selected-route
+view. Hovering or clicking a hut marker shows the hut name and altitude when the
+hut dataset provides an elevation value.
 
 The current elevation-change filter uses `ascent_m + descent_m` for each day.
 Results are assembled from the SQLite `routes` table and shown as candidate

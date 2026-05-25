@@ -14,6 +14,7 @@ from pydantic import BaseModel
 DEFAULT_DATABASE = Path("data") / "hiking_routes.sqlite"
 DEFAULT_HUTS = Path("my_geodataframe.pkl")
 STATIC_DIR = Path(__file__).parent / "web"
+MEDIA_DIR = Path(__file__).parent / "media"
 MAX_DAYS = 10
 DEFAULT_RESULT_LIMIT = 50
 
@@ -35,6 +36,7 @@ class HutMarker(BaseModel):
     hut: str
     latitude: float
     longitude: float
+    altitude_m: float | None = None
 
 
 class Itinerary(BaseModel):
@@ -71,6 +73,8 @@ HIKING_CATEGORY_RANK = {
 app = FastAPI(title="ViaMontana API")
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+if MEDIA_DIR.exists():
+    app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
 
 def database_path() -> Path:
@@ -108,8 +112,33 @@ def hut_coordinate_lookup() -> dict[str, HutMarker]:
             hut=str(name),
             latitude=float(point.y),
             longitude=float(point.x),
+            altitude_m=first_optional_float(
+                row.get("ele"), row.get("elevation"), row.get("alt"), row.get("quota")
+            ),
         )
     return result
+
+
+def first_optional_float(*values: object) -> float | None:
+    for value in values:
+        parsed = parse_optional_float(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def parse_optional_float(value: object) -> float | None:
+    if value is None:
+        return None
+    try:
+        if value != value:
+            return None
+    except TypeError:
+        pass
+    try:
+        return float(str(value).strip().replace(",", "."))
+    except ValueError:
+        return None
 
 
 def route_leg_from_row(row: sqlite3.Row, include_geometry: bool) -> RouteLeg:

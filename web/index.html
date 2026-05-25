@@ -16,8 +16,11 @@
     <main class="app-shell">
       <section class="planner-panel" aria-label="Route search">
         <div class="brand-block">
-          <p class="eyebrow">ViaMontana</p>
-          <h1>Plan hut-to-hut days from precomputed Swiss trail routes.</h1>
+          <img class="brand-logo" src="/media/logo.png" alt="ViaMontana logo" />
+          <div class="brand-copy">
+            <p class="eyebrow">ViaMontana</p>
+            <h1>Plan hut-to-hut days from precomputed Swiss trail routes.</h1>
+          </div>
         </div>
 
         <form id="search-form" class="controls">
@@ -90,6 +93,17 @@
         </aside>
 
         <section class="map-panel">
+          <fieldset class="map-source-toggle" aria-label="Map source">
+            <legend>Map</legend>
+            <label>
+              <input type="radio" name="map_source" value="swisstopo" checked />
+              <span>Swisstopo</span>
+            </label>
+            <label>
+              <input type="radio" name="map_source" value="osm" />
+              <span>OpenStreetMap</span>
+            </label>
+          </fieldset>
           <div id="map" class="route-map" aria-label="Route map"></div>
         </section>
       </div>

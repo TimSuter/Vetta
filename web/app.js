@@ -5,6 +5,7 @@ const results = document.querySelector("#results");
 const resultsTitle = document.querySelector("#results-title");
 const statusText = document.querySelector("#status-text");
 const routeMapElement = document.querySelector("#map");
+const mapSourceInputs = document.querySelectorAll("input[name='map_source']");
 
 const numberFormat = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
@@ -13,14 +14,40 @@ const switzerlandBounds = [
   [45.75, 5.75],
   [47.9, 10.65],
 ];
+const routeColors = ["#7b2cbf", "#00876c", "#3f3f46", "#8b5cf6", "#2f6f4e"];
 
 let map;
 let hutLayer;
 let routeLayer;
+let baseLayers;
+let hikingPathLayer;
+let activeBaseLayer;
+const hutMarkersByName = new Map();
 let selectedCard;
 
 function formatNumber(value) {
   return numberFormat.format(value);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return entities[character];
+  });
+}
+
+function hutDetailsHtml(marker) {
+  const lines = [`<strong>${escapeHtml(marker.hut)}</strong>`];
+  if (Number.isFinite(marker.altitude_m)) {
+    lines.push(`Altitude: ${formatNumber(marker.altitude_m)} m`);
+  }
+  return lines.join("<br>");
 }
 
 function setStatus(message) {
@@ -39,6 +66,21 @@ function renderEmpty(message) {
   results.appendChild(empty);
 }
 
+function setMapSource(source) {
+  const nextBaseLayer = baseLayers[source] ?? baseLayers.swisstopo;
+  if (activeBaseLayer) {
+    map.removeLayer(activeBaseLayer);
+  }
+  activeBaseLayer = nextBaseLayer;
+  activeBaseLayer.addTo(map);
+
+  if (source === "swisstopo") {
+    hikingPathLayer.addTo(map);
+  } else if (map.hasLayer(hikingPathLayer)) {
+    map.removeLayer(hikingPathLayer);
+  }
+}
+
 function initMap() {
   map = L.map(routeMapElement, {
     zoomControl: true,
@@ -48,15 +90,33 @@ function initMap() {
   map.createPane("hutPane");
   map.getPane("hutPane").style.zIndex = 650;
   map.createPane("routePane");
-  map.getPane("routePane").style.zIndex = 700;
+  map.getPane("routePane").style.zIndex = 660;
+  map.createPane("selectedHutPane");
+  map.getPane("selectedHutPane").style.zIndex = 720;
 
-  L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    {
+  baseLayers = {
+    swisstopo: L.tileLayer(
+      "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg",
+      {
+        attribution: "&copy; swisstopo",
+        maxZoom: 19,
+      },
+    ),
+    osm: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; OpenStreetMap contributors",
       maxZoom: 19,
+    }),
+  };
+
+  hikingPathLayer = L.tileLayer(
+    "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swisstlm3d-wanderwege/default/current/3857/{z}/{x}/{y}.png",
+    {
+      attribution: "&copy; swisstopo",
+      maxZoom: 19,
+      opacity: 0.9,
     },
-  ).addTo(map);
+  );
+  setMapSource("swisstopo");
 
   hutLayer = L.layerGroup().addTo(map);
   routeLayer = L.layerGroup().addTo(map);
@@ -71,19 +131,23 @@ async function loadHutMarkers() {
   }
   const markers = await response.json();
   hutLayer.clearLayers();
+  hutMarkersByName.clear();
   const latLngs = [];
   markers.forEach((marker) => {
+    hutMarkersByName.set(marker.hut, marker);
     const latLng = [marker.latitude, marker.longitude];
     latLngs.push(latLng);
     L.circleMarker(latLng, {
       pane: "hutPane",
-      radius: 4,
+      interactive: true,
+      radius: 5,
       color: "#174c3a",
       weight: 1,
       fillColor: "#236b52",
       fillOpacity: 0.75,
     })
-      .bindTooltip(marker.hut)
+      .bindTooltip(hutDetailsHtml(marker), { sticky: true })
+      .bindPopup(hutDetailsHtml(marker))
       .addTo(hutLayer);
   });
   if (latLngs.length) {
@@ -120,17 +184,19 @@ async function showItineraryOnMap(itinerary, card) {
   selectedCard = card;
   selectedCard.classList.add("is-selected");
 
-  const colors = ["#236b52", "#b4492d", "#245da8", "#8a5a18", "#5b4a93"];
   const bounds = [];
   const legs = await Promise.all(itinerary.legs.map(fetchLegGeometry));
   legs.forEach((leg, index) => {
     const latLngs = parseLineString(leg.geometry_wkt);
+    const routeColor = routeColors[index % routeColors.length];
     bounds.push(...latLngs);
     L.polyline(latLngs, {
       pane: "routePane",
-      color: colors[index % colors.length],
+      color: routeColor,
       weight: 5,
-      opacity: 0.95,
+      opacity: 0.9,
+      dashArray: "10 8",
+      lineCap: "butt",
     })
       .bindPopup(
         [
@@ -145,18 +211,21 @@ async function showItineraryOnMap(itinerary, card) {
   });
 
   itinerary.huts.forEach((hut, index) => {
+    const marker = hutMarkersByName.get(hut) ?? { hut };
     const leg = legs[index === 0 ? 0 : index - 1];
     const latLngs = parseLineString(leg.geometry_wkt);
     const latLng = index === 0 ? latLngs[0] : latLngs.at(-1);
     L.circleMarker(latLng, {
-      pane: "routePane",
+      pane: "selectedHutPane",
+      interactive: true,
       radius: 7,
       color: "#ffffff",
       weight: 2,
       fillColor: index === 0 ? "#b4492d" : "#236b52",
       fillOpacity: 1,
     })
-      .bindTooltip(hut)
+      .bindTooltip(hutDetailsHtml(marker), { sticky: true })
+      .bindPopup(hutDetailsHtml(marker))
       .addTo(routeLayer);
   });
 
@@ -228,12 +297,20 @@ function renderItinerary(itinerary, index) {
   const legs = document.createElement("div");
   legs.className = "legs";
   itinerary.legs.forEach((leg, legIndex) => {
+    const routeColor = routeColors[legIndex % routeColors.length];
     const row = document.createElement("div");
     row.className = "leg";
+    row.style.setProperty("--route-color", routeColor);
 
+    const routeLine = document.createElement("div");
+    routeLine.className = "leg-route-line";
+    const swatch = document.createElement("span");
+    swatch.className = "route-swatch";
+    swatch.setAttribute("aria-hidden", "true");
     const route = document.createElement("div");
     route.className = "leg-route";
     route.textContent = `Day ${legIndex + 1}: ${leg.start_hut} -> ${leg.destination_hut}`;
+    routeLine.append(swatch, route);
 
     const stats = document.createElement("div");
     stats.className = "leg-stats";
@@ -245,7 +322,7 @@ function renderItinerary(itinerary, index) {
       leg.max_hiking_category,
     ].join(" · ");
 
-    row.append(route, stats);
+    row.append(routeLine, stats);
     legs.appendChild(row);
   });
 
@@ -323,6 +400,14 @@ let hutSearchTimer;
 startHutInput.addEventListener("input", () => {
   window.clearTimeout(hutSearchTimer);
   hutSearchTimer = window.setTimeout(() => loadHutOptions(startHutInput.value), 180);
+});
+
+mapSourceInputs.forEach((input) => {
+  input.addEventListener("change", () => {
+    if (input.checked) {
+      setMapSource(input.value);
+    }
+  });
 });
 
 loadHutOptions();
