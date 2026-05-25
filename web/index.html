@@ -35,16 +35,15 @@
             <datalist id="hut-options"></datalist>
           </label>
 
-          <div class="control-grid">
-            <label>
-              <span>Days</span>
-              <input id="days" name="days" type="number" min="1" max="10" value="3" />
-            </label>
-            <label>
-              <span>Limit</span>
-              <input id="limit" name="limit" type="number" min="1" max="200" value="50" />
-            </label>
-          </div>
+          <label>
+            <span>Days</span>
+            <input id="days" name="days" type="number" min="1" max="10" value="3" />
+          </label>
+
+          <label>
+            <span>Max results</span>
+            <input id="limit" name="limit" type="number" min="1" max="200" value="50" />
+          </label>
 
           <fieldset>
             <legend>Hiking time per day</legend>
@@ -78,17 +77,22 @@
         </form>
       </section>
 
-      <section class="results-panel" aria-live="polite">
-        <div class="results-header">
-          <div>
-            <p class="eyebrow">Matches</p>
-            <h2 id="results-title">No search yet</h2>
+      <div class="workspace">
+        <aside class="results-panel" aria-live="polite">
+          <div class="results-header">
+            <div>
+              <p class="eyebrow">Matches</p>
+              <h2 id="results-title">No search yet</h2>
+            </div>
+            <p id="status-text" class="status-text">Enter a hut and route constraints.</p>
           </div>
-          <p id="status-text" class="status-text">Enter a hut and route constraints.</p>
-        </div>
-        <div id="map" class="route-map" aria-label="Route map"></div>
-        <div id="results" class="results-list"></div>
-      </section>
+          <div id="results" class="results-list"></div>
+        </aside>
+
+        <section class="map-panel">
+          <div id="map" class="route-map" aria-label="Route map"></div>
+        </section>
+      </div>
     </main>
 
     <script

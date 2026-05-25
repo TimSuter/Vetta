@@ -61,6 +61,7 @@ function initMap() {
   hutLayer = L.layerGroup().addTo(map);
   routeLayer = L.layerGroup().addTo(map);
   map.fitBounds(switzerlandBounds);
+  window.addEventListener("resize", () => map.invalidateSize());
 }
 
 async function loadHutMarkers() {
@@ -111,6 +112,7 @@ async function fetchLegGeometry(leg) {
 }
 
 async function showItineraryOnMap(itinerary, card) {
+  map.invalidateSize();
   routeLayer.clearLayers();
   if (selectedCard) {
     selectedCard.classList.remove("is-selected");
@@ -307,6 +309,7 @@ form.addEventListener("submit", async (event) => {
 
     const cards = data.itineraries.map(renderItinerary);
     results.replaceChildren(...cards);
+    map.invalidateSize();
     await showItineraryOnMap(data.itineraries[0], cards[0]);
     setStatus(`Showing option 1 on the map.`);
   } catch (error) {
